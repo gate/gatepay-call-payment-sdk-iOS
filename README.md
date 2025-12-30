@@ -1,449 +1,366 @@
-# GateOpenSDK 接入文档
+[_简体中文_](README.zh-CN.md)
+
+# GateOpenSDK Integration Guide
+
+## Contents
+
+- [SDK Overview](#1-sdk-overview)
+- [System Requirements](#2-system-requirements)
+- [Integration Method](#3-integration-method)
+- [Configuration Description](#4-configuration-description)
+- [SDK Initialization](#5-sdk-initialization)
+- [Initiating Payment](#6-initiating-payment)
+- [Handling Payment Callbacks](#7-handling-payment-callbacks)
+- [API Reference](#8-api-reference)
+- [FAQs](#9-faqs)
 
 ---
 
-## 中文版本
+## 1. SDK Overview
 
-### 目录
-1. [SDK 简介](#1-sdk-简介)
-2. [环境要求](#2-环境要求)
-3. [集成方式](#3-集成方式)
-4. [配置说明](#4-配置说明)
-5. [SDK 初始化](#5-sdk-初始化)
-6. [发起支付](#6-发起支付)
-7. [处理支付回调](#7-处理支付回调)
-8. [API 参考](#8-api-参考)
-9. [常见问题](#9-常见问题)
+GateOpenSDK is the official iOS Open Platform payment SDK provided by Gate. It enables merchants to integrate Gate Pay into their iOS applications.
 
----
+### Key Features
 
-### 1. SDK 简介
+- Support for Gate Pay
+- Secure payment signature verification
+- Simple and efficient API interfaces
+- Comprehensive callback handling mechanism
 
-GateOpenSDK 是 Gate 提供的 iOS 开放平台支付 SDK，用于在 iOS 应用中集成 Gate 支付功能。
+### Version Information
 
-**主要功能：**
-- 支持 Gate 支付
-- 安全的支付签名验证
-- 简洁的 API 调用接口
-- 完善的回调处理机制
-
-**版本信息：**
-- 当前版本：1.0.0
-- 最低支持 iOS 版本：iOS 10.0
+- **Current Version:** 1.0.0
+- **Minimum Supported iOS Version:** iOS 10.0
 
 ---
 
-### 2. 环境要求
+## 2. System Requirements
 
-- **Xcode**: 11.0 或更高版本
-- **iOS**: 10.0 或更高版本
-- **语言**: Objective-C / Swift
-- **依赖管理**: CocoaPods
+- Xcode 11.0 or later
+- iOS 10.0 or later
+- Programming Languages: Objective-C / Swift
+- Dependency Manager: CocoaPods
 
 ---
 
-### 3. 集成方式
+## 3. Integration Method
 
-#### 3.1 通过 CocoaPods 集成（推荐）
+### 3.1 Integrate via CocoaPods (Recommended)
 
-1. 在项目的 `Podfile` 文件中添加：
+1. Add to your project's `Podfile`:
 
 ```ruby
-platform :ios, '10.0'
-use_frameworks!
-
-target 'YourApp' do
-  pod 'GateOpenSDK'
-end
+pod 'GateOpenSDK', '~> 1.0.0'
 ```
 
-2. 执行安装命令：
+2. Run the installation command:
 
 ```bash
 pod install
 ```
 
-3. 使用生成的 `.xcworkspace` 文件打开项目。
+3. Open the generated `.xcworkspace` file to start the project.
 
-#### 3.2 手动集成
+### 3.2 Manual Integration
 
-1. 下载 GateOpenSDK.xcframework
-2. 将 framework 拖入项目
-3. 在 `General -> Frameworks, Libraries, and Embedded Content` 中添加 framework
-4. 确保 `Embed & Sign` 选项已选中
+1. Download `GateOpenSDK.xcframework`.
+2. Drag the framework into your project.
+3. Add the framework under **General -> Frameworks, Libraries, and Embedded Content**.
+4. Ensure **Embed & Sign** is selected.
 
 ---
 
-### 4. 配置说明
+## 4. Configuration Description
 
-#### 4.1 配置 URL Scheme
+### 4.1 URL Scheme Configuration
 
-为了接收支付回调，需要配置 URL Scheme：
+To receive payment callbacks, you must configure a URL Scheme:
 
-1. 在 Xcode 中选择项目的 Target
-2. 选择 `Info` 标签页
-3. 展开 `URL Types`，点击 `+` 添加新的 URL Scheme
-4. 在 `URL Schemes` 中填入：`gatepay{api_key的MD5值前16位小写}`
+1. Select your project Target in Xcode.
+2. Go to the **Info** tab.
+3. Expand **URL Types**, click **+** to add a new URL Scheme.
+4. Enter the following value in **URL Schemes**:
 
-**示例：**
 ```
-如果你的 api_key = "test123456"
-MD5 值 = "abcd1234efgh5678..."
-URL Scheme = "gatepayabcd1234efgh5678"
+gatepay{first 16 lowercase characters of the MD5 value of api_key}
 ```
 
-#### 4.2 配置 Info.plist
+**Example:**
 
-在 `Info.plist` 中添加以下配置（如果需要跳转到其他应用）：
+If your `api_key` is `abc123...`, and the MD5 hash starts with `a1b2c3d4e5f6g7h8`, then your URL Scheme would be:
+
+```
+gatepaya1b2c3d4e5f6g7h8
+```
+
+### 4.2 Info.plist Configuration
+
+If your app needs to redirect to other apps, add the required configuration to `Info.plist`:
 
 ```xml
 <key>LSApplicationQueriesSchemes</key>
 <array>
-    <string>gatepay</string>
+    <string>gateio</string>
 </array>
 ```
 
-#### 4.3 隐私权限配置
+### 4.3 Privacy Permission Configuration
 
-SDK 已包含隐私清单（Privacy Bundle），无需额外配置。
+The SDK already includes a Privacy Bundle. No additional configuration is required.
 
 ---
 
-### 5. SDK 初始化
+## 5. SDK Initialization
 
-SDK 使用单例模式，无需手动初始化。可以直接使用 `GTOPayManager.shared` 访问。
+The SDK uses a singleton pattern and does not require manual initialization. You can directly access it via: `GTOPayManager.shared`.
 
-#### 5.1 Objective-C
+### 5.1 Objective-C
 
 ```objc
-#import <GateOpenSDK/GTOPSDK.h>
-
-// 获取 SDK 版本
-NSString *version = [GTOPayManager SDKVersion];
-NSLog(@"SDK Version: %@", version);
+// Get SDK version
+NSString *version = [GTOPayManager shared].sdkVersion;
 ```
 
-#### 5.2 Swift
+### 5.2 Swift
 
 ```swift
-import GateOpenSDK
-
-// 获取 SDK 版本
-let version = GTOPayManager.sdkVersion()
-print("SDK Version: \(version ?? "")")
+// Get SDK version
+let version = GTOPayManager.shared.sdkVersion
 ```
 
 ---
 
-### 6. 发起支付
+## 6. Initiating Payment
 
-#### 6.1 准备支付参数
+### 6.1 Preparing Payment Parameters
 
-在发起支付前，需要从你的服务器获取以下参数：
+Before initiating a payment, you must obtain the following parameters from your server:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| api_key | String | 是 | Gate 提供的 API Key |
-| timestamp | String | 是 | 请求生成时的 UTC 时间戳 |
-| nonce | String | 是 | 随机字符串（建议 32 位以内，由数字和字母组成）|
-| sign | String | 是 | 请求签名（由服务器生成）|
-| prepayid | String | 是 | 预订单 ID |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| api_key | String | Yes | API Key provided by Gate |
+| timestamp | String | Yes | UTC timestamp when the request is generated |
+| nonce | String | Yes | Random string (recommended within 32 characters, numbers and letters only) |
+| sign | String | Yes | Request signature (generated by the server) |
+| prepayId | String | Yes | Prepay order ID |
 
-**重要：** 签名必须在服务器端生成，不要在客户端生成签名，以保证安全性。
+> ⚠️ **Important:** The signature must be generated on the server side for security reasons. Do not generate signatures on the client side.
 
-#### 6.2 Objective-C 示例
+### 6.2 Objective-C Example
 
 ```objc
-#import <GateOpenSDK/GTOPSDK.h>
+// 1. Retrieve payment parameters from the server
+// Mock data used here for demonstration purposes. In production, data must be obtained from your server.
+NSString *apiKey = @"your_api_key";
+NSString *timestamp = @"1234567890";
+NSString *nonce = @"random_string";
+NSString *sign = @"server_generated_signature";
+NSString *prepayId = @"prepay_order_id";
 
-- (void)requestPayment {
-    // 1. 从服务器获取支付参数
-    // 这里使用模拟数据，实际应该从服务器获取
-    NSString *api_key = @"your_api_key";
-    NSString *timestamp = @"1234567890";
-    NSString *nonce = @"random_string_32_chars";
-    NSString *sign = @"signature_from_server";
-    NSString *prepayid = @"prepay_order_id";
-    
-    // 2. 创建支付请求
-    GTOPayRequest *payRequest = [[GTOPayRequest alloc] init];
-    payRequest.api_key = api_key;
-    payRequest.timestamp = timestamp;
-    payRequest.nonce = nonce;
-    payRequest.sign = sign;
-    payRequest.prepayid = prepayid;
-    
-    // 3. 发起支付
-    [[GTOPayManager shared] payment:payRequest result:^(GTOPayResponse * _Nullable response) {
-        if (response.isSuccess) {
-            NSLog(@"支付成功: %@", response.message);
-            // 处理支付成功逻辑
-        } else {
-            NSLog(@"支付失败: %@", response.message);
-            // 处理支付失败逻辑
-        }
-    }];
-}
+// 2. Create the payment request
+GTOPayRequest *request = [[GTOPayRequest alloc] init];
+request.api_key = apiKey;
+request.timestamp = timestamp;
+request.nonce = nonce;
+request.sign = sign;
+request.prepayId = prepayId;
+
+// 3. Initiate the payment
+[[GTOPayManager shared] startPayWithRequest:request 
+                                  onSuccess:^(GTOPayResponse *response) {
+    // Handle payment success
+    NSLog(@"Payment successful: %@", response.message);
+} onFailure:^(GTOPayResponse *response) {
+    // Handle payment failure
+    NSLog(@"Payment failed: %@", response.message);
+}];
 ```
 
-#### 6.3 Swift 示例
+### 6.3 Swift Example
 
 ```swift
-import GateOpenSDK
+// 1. Retrieve payment parameters from the server
+// Mock data used here for demonstration purposes. In production, data must be obtained from your server.
+let apiKey = "your_api_key"
+let timestamp = "1234567890"
+let nonce = "random_string"
+let sign = "server_generated_signature"
+let prepayId = "prepay_order_id"
 
-func requestPayment() {
-    // 1. 从服务器获取支付参数
-    // 这里使用模拟数据，实际应该从服务器获取
-    let api_key = "your_api_key"
-    let timestamp = "1234567890"
-    let nonce = "random_string_32_chars"
-    let sign = "signature_from_server"
-    let prepayid = "prepay_order_id"
-    
-    // 2. 创建支付请求
-    let payRequest = GTOPayRequest()
-    payRequest.api_key = api_key
-    payRequest.timestamp = timestamp
-    payRequest.nonce = nonce
-    payRequest.sign = sign
-    payRequest.prepayid = prepayid
-    
-    // 3. 发起支付
-    GTOPayManager.shared()?.payment(payRequest) { response in
-        if response?.isSuccess == true {
-            print("支付成功: \(response?.message ?? "")")
-            // 处理支付成功逻辑
-        } else {
-            print("支付失败: \(response?.message ?? "")")
-            // 处理支付失败逻辑
-        }
-    }
-}
+// 2. Create the payment request
+let request = GTOPayRequest()
+request.api_key = apiKey
+request.timestamp = timestamp
+request.nonce = nonce
+request.sign = sign
+request.prepayId = prepayId
+
+// 3. Initiate the payment
+GTOPayManager.shared.startPay(with: request, onSuccess: { response in
+    // Handle payment success
+    print("Payment successful: \(response.message ?? "")")
+}, onFailure: { response in
+    // Handle payment failure
+    print("Payment failed: \(response.message ?? "")")
+})
 ```
 
 ---
 
-### 7. 处理支付回调
+## 7. Handling Payment Callbacks
 
-#### 7.1 在 AppDelegate 中处理 URL Scheme
+### 7.1 Handling URL Scheme in AppDelegate
 
-支付完成后，Gate 应用会通过 URL Scheme 返回到你的应用。你需要在 `AppDelegate` 中处理这个回调。
+After the payment is completed, the Gate App will redirect back to your app via the URL Scheme. You must handle this callback in your `AppDelegate`.
 
-#### 7.2 Objective-C 示例
+### 7.2 Objective-C Example
 
 ```objc
-#import <GateOpenSDK/GTOPSDK.h>
-
-@implementation AppDelegate
-
 - (BOOL)application:(UIApplication *)app 
-            openURL:(NSURL *)url
+            openURL:(NSURL *)url 
             options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options {
     
-    // 检查是否是 Gate 支付的回调
-    if ([url.scheme hasPrefix:@"gatepay"]) {
-        // 将 URL 传递给 SDK 处理
-        [[GTOPayManager shared] handle:url];
+    // Check whether the callback is from Gate Pay
+    if ([[GTOPayManager shared] canHandleURL:url]) {
+        // Pass the URL to the SDK for processing
+        [[GTOPayManager shared] handleOpenURL:url];
         
-        // 解析 URL 参数（可选）
-        NSURLComponents *urlComponents = [NSURLComponents componentsWithURL:url 
-                                                     resolvingAgainstBaseURL:NO];
-        NSArray<NSURLQueryItem *> *queryItems = urlComponents.queryItems;
+        // Parse the URL parameters (optional)
+        NSDictionary *params = [[GTOPayManager shared] parseURLParams:url];
+        NSString *prepayId = params[@"prepayId"];
         
-        for (NSURLQueryItem *item in queryItems) {
-            if ([item.name isEqualToString:@"prepayId"]) {
-                NSString *prepayId = item.value;
-                NSLog(@"Prepay ID: %@", prepayId);
-                
-                // 根据 prepayId 查询订单状态
-                [self queryOrderStatus:prepayId];
-                break;
-            }
-        }
+        // Query the order status based on the prepayId
+        // Query the order status from your server
+        // Do not rely solely on the client-side callback. Always verify the payment result on the server side.
         
         return YES;
     }
     
     return NO;
 }
-
-- (void)queryOrderStatus:(NSString *)prepayId {
-    // 向你的服务器查询订单状态
-    // 不要完全依赖客户端回调，应该在服务器端验证支付结果
-}
-
-@end
 ```
 
-#### 7.3 Swift 示例
+### 7.3 Swift Example
 
 ```swift
-import GateOpenSDK
-
-@UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+func application(_ app: UIApplication, 
+                 open url: URL, 
+                 options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
     
-    func application(_ app: UIApplication, 
-                    open url: URL, 
-                    options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+    // Check whether the callback is from Gate Pay
+    if GTOPayManager.shared.canHandle(url) {
+        // Pass the URL to the SDK for processing
+        GTOPayManager.shared.handleOpen(url)
         
-        // 检查是否是 Gate 支付的回调
-        if url.scheme?.hasPrefix("gatepay") == true {
-            // 将 URL 传递给 SDK 处理
-            GTOPayManager.shared()?.handle(url)
+        // Parse the URL parameters (optional)
+        if let params = GTOPayManager.shared.parseURLParams(url) {
+            let prepayId = params["prepayId"] as? String
             
-            // 解析 URL 参数（可选）
-            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-               let queryItems = components.queryItems {
-                
-                for item in queryItems {
-                    if item.name == "prepayId", let prepayId = item.value {
-                        print("Prepay ID: \(prepayId)")
-                        
-                        // 根据 prepayId 查询订单状态
-                        queryOrderStatus(prepayId: prepayId)
-                        break
-                    }
-                }
-            }
-            
-            return true
+            // Query the order status based on the prepayId
+            // Query the order status from your server
+            // Do not rely solely on the client-side callback. Always verify the payment result on the server side.
         }
         
-        return false
+        return true
     }
     
-    func queryOrderStatus(prepayId: String) {
-        // 向你的服务器查询订单状态
-        // 不要完全依赖客户端回调，应该在服务器端验证支付结果
-    }
+    return false
 }
 ```
 
-#### 7.4 iOS 13+ Scene Delegate 支持
+### 7.4 iOS 13+ Scene Delegate Support
 
-如果你的应用使用了 Scene Delegate（iOS 13+），需要在 `SceneDelegate` 中处理：
-
-```objc
-// Objective-C
-- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
-    for (UIOpenURLContext *context in URLContexts) {
-        NSURL *url = context.URL;
-        if ([url.scheme hasPrefix:@"gatepay"]) {
-            [[GTOPayManager shared] handle:url];
-            // 处理支付回调
-        }
-    }
-}
-```
+If your app uses Scene Delegate (iOS 13 or later), you must handle the callback in the `SceneDelegate`:
 
 ```swift
-// Swift
+// SceneDelegate.swift
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-    for context in URLContexts {
-        let url = context.url
-        if url.scheme?.hasPrefix("gatepay") == true {
-            GTOPayManager.shared()?.handle(url)
-            // 处理支付回调
-        }
+    guard let url = URLContexts.first?.url else { return }
+    
+    // Handle the payment callback
+    if GTOPayManager.shared.canHandle(url) {
+        GTOPayManager.shared.handleOpen(url)
+    }
+}
+```
+
+```objc
+// SceneDelegate.m
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
+    NSURL *url = URLContexts.allObjects.firstObject.URL;
+    if (url == nil) return;
+    
+    // Handle the payment callback
+    if ([[GTOPayManager shared] canHandleURL:url]) {
+        [[GTOPayManager shared] handleOpenURL:url];
     }
 }
 ```
 
 ---
 
-### 8. API 参考
+## 8. API Reference
 
-#### 8.1 GTOPayManager
+### 8.1 GTOPayManager
 
-**单例访问**
-```objc
-+ (instancetype)shared;
-```
+| Method | Description |
+|--------|-------------|
+| `shared` | Singleton access |
+| `sdkVersion` | Get SDK version |
+| `startPay(with:onSuccess:onFailure:)` | Initiate payment |
+| `canHandle(_:)` / `canHandleURL:` | Check if URL can be handled |
+| `handleOpen(_:)` / `handleOpenURL:` | Handle payment callback |
+| `parseURLParams(_:)` | Parse URL parameters |
 
-**获取 SDK 版本**
-```objc
-+ (NSString *)SDKVersion;
-```
+### 8.2 GTOPayRequest
 
-**发起支付**
-```objc
-- (void)payment:(GTOPayRequest *)payItem 
-         result:(GTOPayResultHandle)handle;
-```
+Payment request model:
 
-**处理支付回调**
-```objc
-- (void)handle:(NSURL *)url;
-```
+| Property | Type | Description |
+|----------|------|-------------|
+| api_key | NSString | API Key provided by Gate |
+| timestamp | NSString | UTC timestamp |
+| nonce | NSString | Random string |
+| sign | NSString | Request signature |
+| prepayId | NSString | Prepay order ID |
 
-#### 8.2 GTOPayRequest
+### 8.3 GTOPayResponse
 
-支付请求参数模型
+Payment response model:
 
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| api_key | NSString | Gate 提供的 API Key |
-| timestamp | NSString | UTC 时间戳 |
-| nonce | NSString | 随机字符串 |
-| sign | NSString | 请求签名 |
-| prepayid | NSString | 预订单 ID |
-
-#### 8.3 GTOPayResponse
-
-支付响应模型
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| isSuccess | BOOL | 是否支付成功 |
-| message | NSString | 返回消息 |
-
-**初始化方法**
-```objc
-- (instancetype)initWith:(BOOL)isSuccess 
-                 message:(NSString *)message;
-```
+| Property | Type | Description |
+|----------|------|-------------|
+| isSuccess | BOOL | Whether the payment is successful |
+| message | NSString | Response message |
 
 ---
 
-### 9. 常见问题
+## 9. FAQs
 
-#### 9.1 如何获取 api_key？
+### 9.1 How do I obtain the api_key?
 
-api_key 需要在 Gate 开放平台注册并创建应用后获取。请访问 Gate 开放平台获取。
+You must register and create an application on the Gate Open Platform to obtain the `api_key`. Please visit the [Gate Open Platform](https://www.gate.io) for more details.
 
-#### 9.2 签名如何生成？
+### 9.2 How is the signature generated?
 
-签名必须在服务器端生成，使用 Gate 提供的签名算法。具体算法请参考 Gate 开放平台文档。
+The signature must be generated on the server side using the signature algorithm provided by Gate. For the detailed algorithm, please refer to the Gate Open Platform documentation.
 
-**重要：** 切勿在客户端生成签名，以免泄露密钥。
+> ⚠️ **Important:** Never generate the signature on the client side to prevent exposure of sensitive keys.
 
-#### 9.3 支付回调不被调用怎么办？
+### 9.3 What should I do if the payment callback is not triggered?
 
-请检查：
-1. URL Scheme 是否正确配置
-2. URL Scheme 格式是否为 `gatepay{api_key的MD5前16位小写}`
-3. AppDelegate 或 SceneDelegate 中的回调方法是否正确实现
-4. Gate 应用是否已安装
+Please check the following:
 
-#### 9.4 Bitcode 支持
+- Whether the URL Scheme is configured correctly
+- Whether the URL Scheme format is: `gatepay{first 16 lowercase characters of the MD5 value of api_key}`
+- Whether the callback method is correctly implemented in `AppDelegate` or `SceneDelegate`
+- Whether the Gate App is installed
 
-当前版本不支持 Bitcode。如果项目中启用了 Bitcode，需要在 Build Settings 中关闭：
+### 9.4 Bitcode Support
 
-```ruby
-# Podfile
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['ENABLE_BITCODE'] = 'NO'
-    end
-  end
-end
-```
+The current version does not support Bitcode. If Bitcode is enabled in your project, please disable it in **Build Settings**.
 
-#### 9.5 最低 iOS 版本支持
+### 9.5 Minimum Supported iOS Version
 
-SDK 最低支持 iOS 10.0。如果需要支持更低版本，请联系 Gate 技术支持。
-
-
+The SDK supports iOS 10.0 or later. If you require support for lower versions, please contact Gate Technical Support.
 
